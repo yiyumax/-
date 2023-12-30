@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #111;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="myCanvas"></canvas>
+
+  <script>
+    var canvas = document.getElementById("myCanvas");
+    var ctx = canvas.getContext("2d");
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    function createFirework() {
+      var x = Math.random() * canvas.width;
+      var y = canvas.height - Math.random() * (canvas.height / 2) - canvas.height / 4; // 上半部1/4~3/4
+      var ascentSpeed = 3 + Math.random() * 1.5; // 粒子上升速度
+      var explosionSpeed = 2; // 爆炸速度 
+      var color = getRandomColor();
+
+      // 添加起始粒子
+      var startParticle = {
+        x: x,
+        y: canvas.height,
+        size: Math.random() * 3 + 1,
+        speed: {
+          magnitude: ascentSpeed,
+          angle: Math.PI * 3 / 2  // 向上
+        },
+        color: color,
+        life: Math.random() * 50 + 50  // 粒子生命時間
+      };
+
+      return {
+        x: x,
+        y: y,
+        speed: ascentSpeed,
+        color: color,
+        particles: [startParticle],
+        exploded: false // 用於標記煙火是否已經爆炸
+      };
+    }
+
+    function createParticles(x, y, color, explosionSpeed) {
+      var particles = [];
+      var numParticles = 100;
+      for (var i = 0; i < numParticles; i++) {
+        particles.push({
+          x: x,
+          y: y,
+          size: Math.random() * 3 + 1,
+          speed: {
+            magnitude: explosionSpeed * Math.random(), // 不同的速度
+            angle: Math.random() * 2 * Math.PI
+          },
+          color: color,
+          life: Math.random() * 10 + 100 // 粒子生命時間
+        });
+      }
+      return particles;
+    }
+
+    function getRandomColor() {
+      var letters = "89ABCDEF";
+      var color = "#";
+      for (var i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * letters.length)];
+      }
+      return color;
+    }
+
+    var fireworks = [];
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 每幀更新和繪製所有煙火
+      for (var i = 0; i < fireworks.length; i++) {
+        var firework = fireworks[i];
+
+        if (!firework.exploded) {
+          // 更新起始粒子位置
+          var startParticle = firework.particles[0];
+          startParticle.x += startParticle.speed.magnitude * Math.cos(startParticle.speed.angle);
+          startParticle.y += startParticle.speed.magnitude * Math.sin(startParticle.speed.angle);
+          startParticle.life--;
+
+          // 繪製起始粒子
+          ctx.beginPath();
+          ctx.arc(startParticle.x, startParticle.y, startParticle.size, 0, 2 * Math.PI);
+          ctx.fillStyle = startParticle.color;
+          ctx.fill();
+
+          // 如果起始粒子達到指定高度，標記煙火已經爆炸
+          if (startParticle.y <= firework.y) {
+            firework.exploded = true;
+            firework.particles = [...firework.particles, ...createParticles(firework.x, firework.y, firework.color, 2)];
+          }
+        } else {
+          // 繪製煙火粒子
+          for (var j = 0; j < firework.particles.length; j++) {
+            var particle = firework.particles[j];
+
+            // 更新粒子位置
+            particle.x += particle.speed.magnitude * Math.cos(particle.speed.angle);
+            particle.y += particle.speed.magnitude * Math.sin(particle.speed.angle);
+            particle.life--;
+
+            // 繪製粒子
+            ctx.beginPath();
+            ctx.arc(particle.x, particle.y, particle.size, 0, 2 * Math.PI);
+            ctx.fillStyle = particle.color;
+            ctx.fill();
+
+            // 移除生命週期結束的粒子
+            if (particle.life <= 0) {
+              firework.particles.splice(j, 1);
+              j--;
+            }
+          }
+        }
+
+        // 移除生命週期結束的煙火
+        if (firework.exploded && firework.particles.length === 0) {
+          fireworks.splice(i, 1);
+          i--;
+        }
+      }
+
+      // 有一定概率生成新的煙火
+      if (Math.random() < 0.01) {
+        fireworks.push(createFirework());
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
+
+</body>
+</html>
